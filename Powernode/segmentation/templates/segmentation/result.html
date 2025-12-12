@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>分群结果</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 32px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+        .card { border: 1px solid #ddd; padding: 12px; border-radius: 6px; }
+        .btn { padding: 8px 14px; border: 1px solid #0066cc; background: #0b79d0; color: #fff; border-radius: 4px; cursor: pointer; text-decoration: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+        th, td { border: 1px solid #ccc; padding: 6px; font-size: 12px; }
+        th { background: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <div style="margin-bottom:16px;">
+        <a class="btn" href="{% url 'segmentation:upload' %}">重新上传</a>
+        <a class="btn" href="{% url 'segmentation:download' %}">下载分群结果 CSV</a>
+    </div>
+
+    <h2>分群概览</h2>
+    <div class="grid">
+        {% for item in summaries %}
+        <div class="card">
+            <h3>Cluster {{ item.cluster_id }}</h3>
+            <p>样本数：{{ item.size }}</p>
+            <p>均消费额：{{ item.avg_amount|floatformat:2 }}</p>
+            <p>均订单数：{{ item.avg_order_count|floatformat:2 }}</p>
+            <p>偏好品类：{{ item.top_category }}</p>
+            <p>偏好渠道：{{ item.top_channel }}</p>
+            <p>偏好设备：{{ item.top_device }}</p>
+            <p>推荐动作：{{ item.action }}</p>
+        </div>
+        {% empty %}
+        <p>暂无分群结果，请先上传数据。</p>
+        {% endfor %}
+    </div>
+
+    <h2 style="margin-top:24px;">样本明细 (前30)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>user_id</th>
+                <th>cluster</th>
+                <th>total_amount</th>
+                <th>order_count</th>
+                <th>avg_amount</th>
+                <th>promo_ratio</th>
+                <th>refund_ratio</th>
+                <th>top_category</th>
+                <th>top_channel</th>
+                <th>top_device</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in samples %}
+            <tr>
+                <td>{{ row.user_id }}</td>
+                <td>{{ row.cluster_id }}</td>
+                <td>{{ row.total_amount|floatformat:2 }}</td>
+                <td>{{ row.order_count }}</td>
+                <td>{{ row.avg_amount|floatformat:2 }}</td>
+                <td>{{ row.promo_ratio|floatformat:2 }}</td>
+                <td>{{ row.refund_ratio|floatformat:2 }}</td>
+                <td>{{ row.top_category }}</td>
+                <td>{{ row.top_channel }}</td>
+                <td>{{ row.top_device }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
+

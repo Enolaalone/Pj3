@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>上传消费记录</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 32px; }
+        .card { border: 1px solid #ddd; padding: 20px; border-radius: 6px; max-width: 720px; }
+        .error { color: #b22; margin-top: 12px; }
+        .btn { padding: 8px 14px; border: 1px solid #0066cc; background: #0b79d0; color: #fff; border-radius: 4px; cursor: pointer; }
+        .btn:disabled { background: #9bb; cursor: not-allowed; }
+        label { display: block; margin: 12px 0 6px; }
+        input[type="file"], input[type="number"] { width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>上传消费记录 → 自动分群</h2>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label>CSV 文件</label>
+            {{ form.file }}
+            <label>分群数（可选，2-12，默认4）</label>
+            {{ form.cluster_count }}
+            <div style="margin-top: 16px;">
+                <button type="submit" class="btn">开始分群</button>
+            </div>
+        </form>
+        {% if error %}
+        <div class="error">错误：{{ error }}</div>
+        {% endif %}
+    </div>
+</body>
+</html>
+

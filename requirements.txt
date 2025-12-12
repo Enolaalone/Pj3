@@ -2,3 +2,6 @@ asgiref==3.11.0
 Django==6.0
 sqlparse==0.5.4
 tzdata==2025.2
+numpy==2.1.1
+pandas==2.2.3
+scikit-learn==1.5.2
