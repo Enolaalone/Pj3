@@ -1,0 +1,40 @@
+# 依赖
+venv/
+env/
+.venv/
+*.pyc
+__pycache__/
+.python-version
+
+# 环境变量
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Django
+*.log
+*.pot
+*.pyc
+db.sqlite3
+db.sqlite3-journal
+media/
+!media/.gitkeep
+staticfiles/
+
+# 生产环境
+.coverage
+htmlcov/
+.coverage.*
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 系统
+.DS_Store
+Thumbs.db
