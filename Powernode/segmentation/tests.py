@@ -36,7 +36,9 @@ class ServiceTests(TestCase):
         self.assertTrue(pd.api.types.is_datetime64tz_dtype(df["order_time"]))
 
     def test_process_upload_pipeline(self):
-        summaries, samples = process_upload(io.BytesIO(sample_csv_bytes()), cluster_count=2)
+        summaries, samples, metrics, chart_data = process_upload(
+            io.BytesIO(sample_csv_bytes()), cluster_count=2
+        )
         self.assertGreaterEqual(len(summaries), 1)
         self.assertGreaterEqual(len(samples), 2)
         self.assertEqual(OrderRecord.objects.count(), 3)
@@ -44,6 +46,16 @@ class ServiceTests(TestCase):
         # cluster ids should be consecutive starting at 0
         cluster_ids = sorted(UserClusterProfile.objects.values_list("cluster_id", flat=True))
         self.assertEqual(cluster_ids, [0, 1])
+        self.assertEqual(metrics["k_used"], 2)
+        self.assertIn("cluster_means", chart_data)
+
+    def test_process_upload_auto_k(self):
+        summaries, samples, metrics, chart_data = process_upload(
+            io.BytesIO(sample_csv_bytes()), auto_k=True, k_min=2, k_max=3
+        )
+        self.assertTrue(metrics["k_auto"])
+        self.assertIn(metrics["k_used"], [2, 3])
+        self.assertGreaterEqual(len(metrics.get("scores", [])), 1)
 
 
 class ViewTests(TestCase):

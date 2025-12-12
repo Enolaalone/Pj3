@@ -1,35 +1,45 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <title>上传消费记录</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 32px; }
-        .card { border: 1px solid #ddd; padding: 20px; border-radius: 6px; max-width: 720px; }
-        .error { color: #b22; margin-top: 12px; }
-        .btn { padding: 8px 14px; border: 1px solid #0066cc; background: #0b79d0; color: #fff; border-radius: 4px; cursor: pointer; }
-        .btn:disabled { background: #9bb; cursor: not-allowed; }
-        label { display: block; margin: 12px 0 6px; }
-        input[type="file"], input[type="number"] { width: 100%; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h2>上传消费记录 → 自动分群</h2>
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <label>CSV 文件</label>
-            {{ form.file }}
-            <label>分群数（可选，2-12，默认4）</label>
-            {{ form.cluster_count }}
-            <div style="margin-top: 16px;">
-                <button type="submit" class="btn">开始分群</button>
+{% extends "segmentation/base.html" %}
+{% block title %}上传消费记录{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h4 mb-4">上传消费记录 → 自动分群</h2>
+                <form method="post" enctype="multipart/form-data" class="vstack gap-3">
+                    {% csrf_token %}
+                    <div>
+                        <label class="form-label">CSV 文件</label>
+                        {{ form.file }}
+                    </div>
+                    <div>
+                        <label class="form-label">分群数（可选，2-12，默认4）</label>
+                        {{ form.cluster_count }}
+                    </div>
+                    <div class="form-check form-switch">
+                        {{ form.auto_k }}
+                        <label class="form-check-label">自动选择 K</label>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">K 最小值</label>
+                            {{ form.k_min }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">K 最大值</label>
+                            {{ form.k_max }}
+                        </div>
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-primary w-100">开始分群</button>
+                    </div>
+                </form>
+                {% if error %}
+                <div class="alert alert-danger mt-3 mb-0">错误：{{ error }}</div>
+                {% endif %}
             </div>
-        </form>
-        {% if error %}
-        <div class="error">错误：{{ error }}</div>
-        {% endif %}
+        </div>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}
 

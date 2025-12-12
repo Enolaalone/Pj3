@@ -8,6 +8,7 @@ from typing import Dict, Iterable, List, Tuple
 import numpy as np
 import pandas as pd
 from django.db import transaction
+from sklearn.metrics import silhouette_score
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
@@ -119,6 +120,46 @@ def run_kmeans(user_features: pd.DataFrame, n_clusters: int = 4) -> Tuple[pd.Dat
     return data, {"centers": kmeans.cluster_centers_, "inertia": kmeans.inertia_}
 
 
+def choose_k_auto(user_features: pd.DataFrame, k_min: int = 2, k_max: int = 8) -> Tuple[int, List[Dict], str]:
+    """Auto-select K using silhouette when possible, fallback to inertia."""
+    n_samples = len(user_features)
+    if n_samples < 2:
+        raise ValueError("样本太少，无法分群（至少2个用户）。")
+    k_max = max(k_min, min(k_max, n_samples - 1))  # silhouette需要 n_samples > k
+    numeric_cols = [
+        "total_amount",
+        "order_count",
+        "avg_amount",
+        "promo_ratio",
+        "refund_ratio",
+        "recency_days",
+    ]
+    scaler = StandardScaler()
+    data_scaled = scaler.fit_transform(user_features[numeric_cols])
+    scores: List[Dict] = []
+    for k in range(k_min, k_max + 1):
+        if k < 2:
+            continue
+        model = KMeans(n_clusters=k, n_init="auto", random_state=42)
+        labels = model.fit_predict(data_scaled)
+        inertia = float(model.inertia_)
+        sil = None
+        try:
+            sil = float(silhouette_score(data_scaled, labels)) if len(set(labels)) > 1 else None
+        except Exception:
+            sil = None
+        scores.append({"k": k, "inertia": inertia, "silhouette": sil})
+    # 选择规则：优先最高silhouette，其次最小inertia
+    valid_sil = [s for s in scores if s["silhouette"] is not None]
+    if valid_sil:
+        best = max(valid_sil, key=lambda x: x["silhouette"])
+        method = "silhouette"
+    else:
+        best = min(scores, key=lambda x: x["inertia"])
+        method = "inertia"
+    return int(best["k"]), scores, method
+
+
 def make_cluster_tags(clustered: pd.DataFrame) -> List[Dict]:
     """Generate simple labels/actions per cluster."""
     summaries: List[Dict] = []
@@ -167,12 +208,22 @@ def persist_cluster_profiles(clustered: pd.DataFrame) -> None:
 
 
 @transaction.atomic
-def process_upload(uploaded_file, cluster_count: int = 4) -> Tuple[List[Dict], List[Dict]]:
+def process_upload(
+    uploaded_file,
+    cluster_count: int = 4,
+    auto_k: bool = False,
+    k_min: int = 2,
+    k_max: int = 8,
+) -> Tuple[List[Dict], List[Dict], Dict, Dict]:
     """Main pipeline: load CSV, persist orders, build features, cluster, persist profiles."""
     df = load_csv_to_df(uploaded_file)
     persist_orders(df)
     user_features = build_user_features(df)
-    clustered, _ = run_kmeans(user_features, n_clusters=cluster_count)
+    if auto_k:
+        k_used, scores, method = choose_k_auto(user_features, k_min=k_min, k_max=k_max)
+    else:
+        k_used, scores, method = cluster_count, [], "manual"
+    clustered, info = run_kmeans(user_features, n_clusters=k_used)
     persist_cluster_profiles(clustered)
     cluster_summaries = make_cluster_tags(clustered)
     sample_rows_raw = clustered.head(30).to_dict(orient="records")
@@ -186,5 +237,35 @@ def process_upload(uploaded_file, cluster_count: int = 4) -> Tuple[List[Dict], L
             else:
                 converted[k] = v
         sample_rows.append(converted)
-    return cluster_summaries, sample_rows
+    # cluster均值用于可视化
+    numeric_cols = [
+        "total_amount",
+        "order_count",
+        "avg_amount",
+        "promo_ratio",
+        "refund_ratio",
+        "recency_days",
+    ]
+    cluster_means = (
+        clustered.groupby("cluster_id")[numeric_cols]
+        .mean()
+        .reset_index()
+        .replace({np.nan: 0})
+    )
+    cluster_means_records = [
+        {k: (float(v) if isinstance(v, (np.floating, np.integer)) else v) for k, v in row.items()}
+        for row in cluster_means.to_dict(orient="records")
+    ]
+    metrics = {
+        "k_used": int(k_used),
+        "k_auto": bool(auto_k),
+        "k_range": [int(k_min), int(k_max)],
+        "method": method,
+        "inertia": float(info["inertia"]),
+        "scores": scores,
+    }
+    chart_data = {
+        "cluster_means": cluster_means_records,
+    }
+    return cluster_summaries, sample_rows, metrics, chart_data
 

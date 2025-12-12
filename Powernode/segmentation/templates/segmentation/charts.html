@@ -1,0 +1,93 @@
+{% extends "segmentation/base.html" %}
+{% block title %}图表展示{% endblock %}
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="card-title">Cluster 总金额 / 订单数</h6>
+                <canvas id="barChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="card-title">聚类中心雷达图</h6>
+                <canvas id="radarChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% if not chart_data.cluster_means %}
+<p class="text-warning">暂无图表数据，请先上传并分群。</p>
+{% endif %}
+{{ chart_data|json_script:"chart-data" }}
+{% endblock %}
+{% block body_extra %}
+<script>
+(() => {
+    const el = document.getElementById("chart-data");
+    if (!el) return;
+    const data = JSON.parse(el.textContent || "{}");
+    const means = data.cluster_means || [];
+    if (!means.length) return;
+    const labels = means.map(m => "Cluster " + m.cluster_id);
+    const totalAmount = means.map(m => m.total_amount);
+    const orderCount = means.map(m => m.order_count);
+    const radarLabels = ["total_amount", "order_count", "avg_amount", "promo_ratio", "refund_ratio", "recency_days"];
+    const radarDatasets = means.map((m, idx) => ({
+        label: "Cluster " + m.cluster_id,
+        data: radarLabels.map(key => m[key] || 0),
+        fill: true,
+        backgroundColor: `rgba(${80 + idx*40}, ${160 - idx*20}, 255, 0.25)`,
+        borderColor: `rgba(${80 + idx*40}, ${160 - idx*20}, 255, 0.9)`
+    }));
+    const axisColor = "#c9d1d9";
+
+    const barCtx = document.getElementById("barChart");
+    if (barCtx) {
+        new Chart(barCtx, {
+            type: "bar",
+            data: {
+                labels,
+                datasets: [
+                    { label: "总金额", data: totalAmount, backgroundColor: "rgba(56, 189, 248, 0.7)" },
+                    { label: "订单数", data: orderCount, backgroundColor: "rgba(251, 146, 60, 0.7)" },
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true, ticks: { color: axisColor } }, x: { ticks: { color: axisColor } } },
+                plugins: { legend: { labels: { color: axisColor } } }
+            }
+        });
+    }
+
+    const radarCtx = document.getElementById("radarChart");
+    if (radarCtx) {
+        new Chart(radarCtx, {
+            type: "radar",
+            data: { labels: radarLabels, datasets: radarDatasets },
+            options: {
+                responsive: true,
+                elements: { line: { borderWidth: 2 } },
+                plugins: { legend: { labels: { color: axisColor } } },
+                scales: {
+                    r: {
+                        angleLines: { color: "#30363d" },
+                        grid: { color: "#30363d" },
+                        pointLabels: { color: axisColor },
+                        ticks: { backdropColor: "transparent", color: axisColor }
+                    }
+                }
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}
+

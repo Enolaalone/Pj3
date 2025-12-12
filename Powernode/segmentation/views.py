@@ -1,9 +1,10 @@
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.core.paginator import Paginator
 
 from .forms import UploadForm
-from .models import UserClusterProfile
+from .models import UserClusterProfile, OrderRecord
 from .services import process_upload
 
 
@@ -14,8 +15,17 @@ def upload_view(request):
             return HttpResponseBadRequest("表单无效")
         file = form.cleaned_data["file"]
         cluster_count = form.cleaned_data.get("cluster_count") or 4
+        auto_k = form.cleaned_data.get("auto_k") or False
+        k_min = form.cleaned_data.get("k_min") or 2
+        k_max = form.cleaned_data.get("k_max") or 8
         try:
-            summaries, samples = process_upload(file, cluster_count=cluster_count)
+            summaries, samples, metrics, chart_data = process_upload(
+                file,
+                cluster_count=cluster_count,
+                auto_k=auto_k,
+                k_min=k_min,
+                k_max=k_max,
+            )
         except Exception as exc:
             return render(
                 request,
@@ -25,19 +35,52 @@ def upload_view(request):
             )
         request.session["last_summaries"] = summaries
         request.session["last_samples"] = samples
-        return redirect(reverse("segmentation:result"))
+        request.session["last_metrics"] = metrics
+        request.session["last_chart_data"] = chart_data
+        return redirect(reverse("segmentation:overview"))
     else:
         form = UploadForm()
-    return render(request, "segmentation/upload.html", {"form": form})
+    return render(request, "segmentation/upload.html", {"form": form, "nav_active": "upload"})
 
 
-def result_view(request):
+def overview_view(request):
     summaries = request.session.get("last_summaries", [])
+    metrics = request.session.get("last_metrics", {})
+    return render(
+        request,
+        "segmentation/overview.html",
+        {"summaries": summaries, "metrics": metrics, "nav_active": "overview"},
+    )
+
+
+def charts_view(request):
+    metrics = request.session.get("last_metrics", {})
+    chart_data = request.session.get("last_chart_data", {})
+    return render(
+        request,
+        "segmentation/charts.html",
+        {"metrics": metrics, "chart_data": chart_data, "nav_active": "charts"},
+    )
+
+
+def samples_view(request):
     samples = request.session.get("last_samples", [])
     return render(
         request,
-        "segmentation/result.html",
-        {"summaries": summaries, "samples": samples},
+        "segmentation/samples.html",
+        {"samples": samples, "nav_active": "samples"},
+    )
+
+
+def orders_view(request):
+    orders_qs = OrderRecord.objects.all().order_by("-order_time")
+    paginator = Paginator(orders_qs, 20)
+    page_number = request.GET.get("page", 1)
+    orders_page = paginator.get_page(page_number)
+    return render(
+        request,
+        "segmentation/orders.html",
+        {"orders_page": orders_page, "nav_active": "orders"},
     )
 
 
