@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}聚类分群{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-diagram-2"></i> 聚类分群</h2>
+  <p class="text-muted mb-0">使用 K-Means 机器学习算法对用户进行自动聚类分群</p>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-4">
+        <div class="col-md-4">
+          <label class="form-label"><i class="bi bi-hash"></i> 聚类数量 (K)</label>
+          {{ form.n_clusters }}
+          <div class="form-text">建议值：3-8，根据业务需求调整</div>
+        </div>
+        <div class="col-md-8">
+          <label class="form-label"><i class="bi bi-list-check"></i> 选择特征字段</label>
+          <div class="border rounded p-3">
+            {{ form.use_features }}
+          </div>
+          <div class="form-text mt-2">至少选择2个特征字段，建议选择3-5个</div>
+        </div>
+        <div class="col-12">
+          <hr>
+          <button class="btn btn-warning btn-lg" type="submit">
+            <i class="bi bi-play-circle"></i> 执行聚类分群
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="card-body">
+    <h5 class="card-title"><i class="bi bi-info-circle"></i> K-Means 聚类说明</h5>
+    <div class="row">
+      <div class="col-md-6">
+        <h6>算法原理：</h6>
+        <ul>
+          <li>K-Means 是一种无监督学习算法</li>
+          <li>通过计算用户特征之间的距离进行聚类</li>
+          <li>将相似的用户自动归为一类</li>
+          <li>每个用户会被分配到距离最近的聚类中心</li>
+        </ul>
+      </div>
+      <div class="col-md-6">
+        <h6>特征选择建议：</h6>
+        <ul>
+          <li><strong>购买次数</strong>：反映用户活跃度</li>
+          <li><strong>总金额</strong>：反映用户价值</li>
+          <li><strong>最近购买天数</strong>：反映用户粘性</li>
+          <li><strong>登录活跃度</strong>：反映用户参与度</li>
+          <li>建议选择相关性不高的特征组合</li>
+        </ul>
+      </div>
+    </div>
+    <div class="alert alert-info mt-3 mb-0">
+      <i class="bi bi-lightbulb"></i> <strong>提示：</strong>聚类结果会显示为 Cluster_0, Cluster_1 等标签，您可以在结果详情页查看每个聚类的特征分布。
+    </div>
+  </div>
+</div>
+{% endblock %}
+

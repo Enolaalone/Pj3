@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}RFM 分群{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-bar-chart"></i> RFM 分群</h2>
+  <p class="text-muted mb-0">基于 Recency（最近购买）、Frequency（购买频率）、Monetary（消费金额）进行用户分群</p>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="text-center p-4 border rounded">
+            <i class="bi bi-clock-history text-primary" style="font-size: 3rem;"></i>
+            <h5 class="mt-3 mb-3">Recency (最近购买)</h5>
+            <p class="text-muted">用户最近一次购买距离今天的天数</p>
+            <label class="form-label">分档数量</label>
+            {{ form.recency_bins }}
+            <div class="form-text mt-2">天数越少，得分越高</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="text-center p-4 border rounded">
+            <i class="bi bi-repeat text-success" style="font-size: 3rem;"></i>
+            <h5 class="mt-3 mb-3">Frequency (购买频率)</h5>
+            <p class="text-muted">用户历史购买总次数</p>
+            <label class="form-label">分档数量</label>
+            {{ form.frequency_bins }}
+            <div class="form-text mt-2">次数越多，得分越高</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="text-center p-4 border rounded">
+            <i class="bi bi-currency-dollar text-warning" style="font-size: 3rem;"></i>
+            <h5 class="mt-3 mb-3">Monetary (消费金额)</h5>
+            <p class="text-muted">用户历史消费总金额</p>
+            <label class="form-label">分档数量</label>
+            {{ form.monetary_bins }}
+            <div class="form-text mt-2">金额越高，得分越高</div>
+          </div>
+        </div>
+        <div class="col-12">
+          <hr>
+          <button class="btn btn-success btn-lg" type="submit">
+            <i class="bi bi-play-circle"></i> 执行 RFM 分群
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="card-body">
+    <h5 class="card-title"><i class="bi bi-info-circle"></i> RFM 分群说明</h5>
+    <div class="row">
+      <div class="col-md-6">
+        <h6>分群逻辑：</h6>
+        <ul>
+          <li>系统会根据用户数据计算 R、F、M 三个维度的得分</li>
+          <li>每个维度按分档数量进行等分或分位数分档</li>
+          <li>最终分群标签格式：R{得分}F{得分}M{得分}</li>
+          <li>例如：R3F2M1 表示最近购买得分3，频率得分2，金额得分1</li>
+        </ul>
+      </div>
+      <div class="col-md-6">
+        <h6>应用场景：</h6>
+        <ul>
+          <li><strong>高价值用户</strong>：R高F高M高（如 R5F5M5）</li>
+          <li><strong>流失用户</strong>：R低F中M中（如 R1F3M3）</li>
+          <li><strong>新用户</strong>：R高F低M低（如 R5F1M1）</li>
+          <li><strong>沉睡用户</strong>：R低F低M低（如 R1F1M1）</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

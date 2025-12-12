@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}规则分群{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-funnel"></i> 规则分群</h2>
+  <p class="text-muted mb-0">通过设置条件规则对用户进行筛选分群</p>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label"><i class="bi bi-calendar-heart"></i> 年龄范围</label>
+          <div class="row g-2">
+            <div class="col-6">
+              {{ form.age_min }}
+              <div class="form-text">最小年龄</div>
+            </div>
+            <div class="col-6">
+              {{ form.age_max }}
+              <div class="form-text">最大年龄</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label"><i class="bi bi-gender-ambiguous"></i> 性别</label>
+          {{ form.gender }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label"><i class="bi bi-geo-alt"></i> 地区</label>
+          {{ form.region }}
+          <div class="form-text">包含关键词</div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label"><i class="bi bi-cart-check"></i> 购买次数范围</label>
+          <div class="row g-2">
+            <div class="col-6">
+              {{ form.purchase_count_min }}
+              <div class="form-text">最少次数</div>
+            </div>
+            <div class="col-6">
+              {{ form.purchase_count_max }}
+              <div class="form-text">最多次数</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label"><i class="bi bi-currency-dollar"></i> 消费金额范围</label>
+          <div class="row g-2">
+            <div class="col-6">
+              {{ form.total_amount_min }}
+              <div class="form-text">最低金额</div>
+            </div>
+            <div class="col-6">
+              {{ form.total_amount_max }}
+              <div class="form-text">最高金额</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-12">
+          <label class="form-label"><i class="bi bi-broadcast"></i> 最近渠道</label>
+          {{ form.last_channel }}
+          <div class="form-text">包含关键词（如：online, offline, app等）</div>
+        </div>
+        <div class="col-12">
+          <hr>
+          <div class="d-flex align-items-center">
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="bi bi-play-circle"></i> 执行分群
+            </button>
+            {% if preview_count is not None %}
+            <div class="ms-4">
+              <span class="badge bg-info fs-6">
+                <i class="bi bi-eye"></i> 预览匹配：<strong>{{ preview_count }}</strong> 人
+              </span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="card-body">
+    <h5 class="card-title"><i class="bi bi-info-circle"></i> 使用说明</h5>
+    <ul class="mb-0">
+      <li>规则分群通过设置多个条件组合来筛选符合条件的用户</li>
+      <li>所有条件之间是"且"的关系，即用户必须同时满足所有设置的条件</li>
+      <li>留空的字段表示不限制该条件</li>
+      <li>地区、渠道字段支持模糊匹配</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}
+
