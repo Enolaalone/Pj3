@@ -8,7 +8,7 @@ from typing import Dict, Iterable, List, Tuple
 import numpy as np
 import pandas as pd
 from django.db import transaction
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silhouette_score
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
@@ -120,12 +120,19 @@ def run_kmeans(user_features: pd.DataFrame, n_clusters: int = 4) -> Tuple[pd.Dat
     return data, {"centers": kmeans.cluster_centers_, "inertia": kmeans.inertia_}
 
 
-def choose_k_auto(user_features: pd.DataFrame, k_min: int = 2, k_max: int = 8) -> Tuple[int, List[Dict], str]:
-    """Auto-select K using silhouette when possible, fallback to inertia."""
+def choose_k_auto(
+    user_features: pd.DataFrame,
+    k_min: int = 2,
+    k_max: int = 8,
+    multi_metric: bool = True,
+) -> Tuple[int, List[Dict], str]:
+    """Auto-select K with multiple metrics; priority silhouette > CH > DBI > inertia."""
     n_samples = len(user_features)
     if n_samples < 2:
         raise ValueError("样本太少，无法分群（至少2个用户）。")
-    k_max = max(k_min, min(k_max, n_samples - 1))  # silhouette需要 n_samples > k
+    # 自适应范围：上限不超过样本数-1，且不大于10
+    effective_k_min = max(2, k_min or 2)
+    effective_k_max = max(effective_k_min, min(k_max or 8, n_samples - 1, 10))
     numeric_cols = [
         "total_amount",
         "order_count",
@@ -137,26 +144,44 @@ def choose_k_auto(user_features: pd.DataFrame, k_min: int = 2, k_max: int = 8) -
     scaler = StandardScaler()
     data_scaled = scaler.fit_transform(user_features[numeric_cols])
     scores: List[Dict] = []
-    for k in range(k_min, k_max + 1):
+    for k in range(effective_k_min, effective_k_max + 1):
         if k < 2:
             continue
         model = KMeans(n_clusters=k, n_init="auto", random_state=42)
         labels = model.fit_predict(data_scaled)
         inertia = float(model.inertia_)
         sil = None
+        ch = None
+        dbi = None
         try:
             sil = float(silhouette_score(data_scaled, labels)) if len(set(labels)) > 1 else None
         except Exception:
             sil = None
-        scores.append({"k": k, "inertia": inertia, "silhouette": sil})
-    # 选择规则：优先最高silhouette，其次最小inertia
-    valid_sil = [s for s in scores if s["silhouette"] is not None]
-    if valid_sil:
-        best = max(valid_sil, key=lambda x: x["silhouette"])
-        method = "silhouette"
-    else:
-        best = min(scores, key=lambda x: x["inertia"])
-        method = "inertia"
+        if multi_metric:
+            try:
+                ch = float(calinski_harabasz_score(data_scaled, labels))
+            except Exception:
+                ch = None
+            try:
+                dbi = float(davies_bouldin_score(data_scaled, labels))
+            except Exception:
+                dbi = None
+        scores.append({"k": k, "inertia": inertia, "silhouette": sil, "ch": ch, "dbi": dbi})
+    # 选择规则：silhouette 最大；否则 CH 最大；否则 DBI 最小；否则 inertia 最小
+    def pick_best():
+        valid_sil = [s for s in scores if s["silhouette"] is not None]
+        if valid_sil:
+            return max(valid_sil, key=lambda x: x["silhouette"]), "silhouette"
+        if multi_metric:
+            valid_ch = [s for s in scores if s["ch"] is not None]
+            if valid_ch:
+                return max(valid_ch, key=lambda x: x["ch"]), "calinski_harabasz"
+            valid_dbi = [s for s in scores if s["dbi"] is not None]
+            if valid_dbi:
+                return min(valid_dbi, key=lambda x: x["dbi"]), "davies_bouldin"
+        return min(scores, key=lambda x: x["inertia"]), "inertia"
+
+    best, method = pick_best()
     return int(best["k"]), scores, method
 
 
@@ -212,6 +237,7 @@ def process_upload(
     uploaded_file,
     cluster_count: int = 4,
     auto_k: bool = False,
+    auto_k_multi: bool = True,
     k_min: int = 2,
     k_max: int = 8,
 ) -> Tuple[List[Dict], List[Dict], Dict, Dict]:
@@ -220,7 +246,7 @@ def process_upload(
     persist_orders(df)
     user_features = build_user_features(df)
     if auto_k:
-        k_used, scores, method = choose_k_auto(user_features, k_min=k_min, k_max=k_max)
+        k_used, scores, method = choose_k_auto(user_features, k_min=k_min, k_max=k_max, multi_metric=auto_k_multi)
     else:
         k_used, scores, method = cluster_count, [], "manual"
     clustered, info = run_kmeans(user_features, n_clusters=k_used)

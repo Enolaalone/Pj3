@@ -4,6 +4,46 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 {% endblock %}
 {% block content %}
+<div class="card mb-3">
+    <div class="card-body">
+        <form class="row g-3" method="get">
+            <div class="col-md-2">
+                <label class="form-label">Cluster</label>
+                <input type="text" class="form-control" name="cluster" value="{{ filters.cluster }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">品类</label>
+                <input type="text" class="form-control" name="category" value="{{ filters.category }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">渠道</label>
+                <input type="text" class="form-control" name="channel" value="{{ filters.channel }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">起始时间 (YYYY-MM-DD)</label>
+                <input type="text" class="form-control" name="date_from" value="{{ filters.date_from }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">结束时间 (YYYY-MM-DD)</label>
+                <input type="text" class="form-control" name="date_to" value="{{ filters.date_to }}">
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button class="btn btn-primary" type="submit">应用筛选</button>
+                <a class="btn btn-outline-light" href="{% url 'segmentation:charts' %}">重置</a>
+            </div>
+        </form>
+    </div>
+    {% if filters.cluster or filters.category or filters.channel or filters.date_from or filters.date_to %}
+    <div class="card-footer text-secondary">
+        当前筛选：
+        {% if filters.cluster %}Cluster={{ filters.cluster }} {% endif %}
+        {% if filters.category %}品类={{ filters.category }} {% endif %}
+        {% if filters.channel %}渠道={{ filters.channel }} {% endif %}
+        {% if filters.date_from %}起={{ filters.date_from }} {% endif %}
+        {% if filters.date_to %}止={{ filters.date_to }}{% endif %}
+    </div>
+    {% endif %}
+</div>
 <div class="row g-3 mb-3">
     <div class="col-lg-6">
         <div class="card h-100">

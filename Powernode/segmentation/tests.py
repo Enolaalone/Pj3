@@ -56,6 +56,9 @@ class ServiceTests(TestCase):
         self.assertTrue(metrics["k_auto"])
         self.assertIn(metrics["k_used"], [2, 3])
         self.assertGreaterEqual(len(metrics.get("scores", [])), 1)
+        # 多指标字段存在
+        self.assertIn("silhouette", metrics["scores"][0])
+        self.assertIn("inertia", metrics["scores"][0])
 
 
 class ViewTests(TestCase):
@@ -64,11 +67,10 @@ class ViewTests(TestCase):
         upload_file = SimpleUploadedFile("data.csv", sample_csv_bytes(), content_type="text/csv")
         resp = client.post(reverse("segmentation:upload"), {"file": upload_file, "cluster_count": 2})
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(resp["Location"], reverse("segmentation:result"))
+        self.assertEqual(resp["Location"], reverse("segmentation:overview"))
 
-        resp_result = client.get(reverse("segmentation:result"))
-        self.assertContains(resp_result, "分群概览")
-        self.assertContains(resp_result, "Cluster")
+        resp_overview = client.get(reverse("segmentation:overview"))
+        self.assertContains(resp_overview, "分群参数")
 
     def test_download_clusters(self):
         # prepare data
@@ -79,4 +81,10 @@ class ViewTests(TestCase):
         self.assertEqual(resp["Content-Type"], "text/csv")
         content = resp.content.decode("utf-8")
         self.assertIn("user_id,cluster_id", content.splitlines()[0])
+
+    def test_charts_filters(self):
+        process_upload(io.BytesIO(sample_csv_bytes()), cluster_count=2)
+        client = Client()
+        resp = client.get(reverse("segmentation:charts"), {"category": "Home"})
+        self.assertEqual(resp.status_code, 200)
 

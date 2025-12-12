@@ -20,6 +20,12 @@ class UploadForm(forms.Form):
         help_text="自动选择K",
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
+    auto_k_multi = forms.BooleanField(
+        required=False,
+        initial=True,
+        help_text="使用多指标自动选K（silhouette/CH/DBI）",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
     k_min = forms.IntegerField(
         required=False,
         min_value=2,
